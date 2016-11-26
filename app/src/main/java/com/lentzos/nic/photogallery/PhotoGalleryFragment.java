@@ -9,8 +9,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Nic on 25/11/2016.
@@ -20,6 +23,8 @@ public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
     //member variable referencing the recyclerview.
     private RecyclerView mPhotoRecyclerView;
+    //Implementing setupAdapter()
+    private List<GalleryItem> mItems = new ArrayList<>();
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -40,16 +45,27 @@ public class PhotoGalleryFragment extends Fragment {
 
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        //Impleneting setupAdapter()
+        setupAdapter();
 
         return v;
+    }
+    //Implementing setupAdapter()
+    private void setupAdapter() {
+        //check whether isAdded() is true before setting adapter. This ensures that the fragment has
+        //been added to an activity and that getActivity() will not be null.
+        //We are using an AsyncTask therefore cannot assume that the fragment is attached to an activity.
+        if (isAdded()) {
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+        }
     }
 
     //Inner class to call networking code in FlickrFetcher.java. Creates a background thread.
     //Utility class called AsyncTask. Override the doInBackground() method to get data from the web site.
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, Void> {
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
         @Override
-        protected Void doInBackground(Void... params) {
+        protected List<GalleryItem> doInBackground(Void... params) {
         //    try {
         //        String result = new FlickrFetchr().getUrlString("https://www.bignerdranch.com");
         //        Log.i(TAG, "Fetched contents of URL: " + result);
@@ -57,8 +73,59 @@ public class PhotoGalleryFragment extends Fragment {
         //        Log.e(TAG, "Failed to fetch URL: ", ioe);
         //    }
             new FlickrFetchr().fetchItems();
-            return null;
+            return new FlickrFetchr().fetchItems();
+        }
+        //Override onpostexecute() which runs after doinbackground() completes.
+        //runs on main thread.
+        //update mItems and call setupAdapter() after fetching photos to update the RecyclerViews data source.
+        @Override
+        protected void onPostExecute(List<GalleryItem> items) {
+            mItems = items;
+            setupAdapter();
+        }
+    }
+
+    //Get photogalleryfragment's recyclerview to display some captions.
+    //First define a viewholder as an inner class.
+
+    private class PhotoHolder extends RecyclerView.ViewHolder{
+        private TextView mTitleTextView;
+
+        public PhotoHolder(View itemView) {
+            super (itemView);
+
+            mTitleTextView = (TextView) itemView;
+        }
+
+        public void bindGalleryItem(GalleryItem item) {
+            mTitleTextView.setText(item.toString());
+        }
+    }
+    // Now, add a recyclerview.adaptor to provide photoholders as needed based on a list of galleryitems.
+    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
+
+        private List<GalleryItem> mGalleryItems;
+
+        public PhotoAdapter(List<GalleryItem> galleryItems) {
+            mGalleryItems = galleryItems;
+        }
+
+        @Override
+        public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
+            TextView textView = new TextView(getActivity());
+            return new PhotoHolder(textView);
+        }
+
+        @Override
+        public void onBindViewHolder(PhotoHolder photoHolder, int position) {
+            GalleryItem galleryItem = mGalleryItems.get(position);
+            photoHolder.bindGalleryItem(galleryItem);
+        }
+
+        @Override
+        public int getItemCount(){
+            return mGalleryItems.size();
         }
     }
 }
-// Now call the execute() method to start the AsyncTask thread. This will call doInBackground().
+
