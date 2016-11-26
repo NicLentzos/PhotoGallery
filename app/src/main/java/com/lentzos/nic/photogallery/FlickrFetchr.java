@@ -1,5 +1,8 @@
 package com.lentzos.nic.photogallery;
 
+import android.net.Uri;
+import android.util.Log;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +14,10 @@ import java.net.URL;
  */
 
 public class FlickrFetchr {
+    //Add some Flickr constants.
+    private static final String TAG = "FlickrFetchr";
+    private static final String API_KEY = "5ed92ceb17fe8fc5058197d126735bfb";
+
     //geturlbytes() fetches raw data from a URL and returns it as an array of bytes.
     public byte[] getUrlBytes(String urlSpec) throws IOException{
         URL url = new URL(urlSpec);
@@ -38,6 +45,24 @@ public class FlickrFetchr {
         //geturlstring() converts the result of geturlbytes() to a string.
         public String getUrlString(String urlSpec) throws IOException {
         return new String(getUrlBytes(urlSpec));
+    }
+    //Method to build a request URL and fetch the URL contents.
+    //Use uri.builder to build the complete URL for flickr api request. This method automatically escapes query strings etc for you.
+    //the extras parameter url_s tells flickr to supply the URL for the small version of the picture if it is available.
+    public void fetchItems() {
+        try {
+            String url = Uri.parse("https://api.flickr.com/services/rest/").buildUpon()
+                    .appendQueryParameter("method", "flickr.photos.getRecent")
+                    .appendQueryParameter("api_key", API_KEY)
+                    .appendQueryParameter("format", "json")
+                    .appendQueryParameter("nojsoncallback", "1")
+                    .appendQueryParameter("extras", "url_s")
+                    .build().toString();
+            String jsonString = getUrlString(url);
+            Log.i(TAG, "Received json: " + jsonString);
+        } catch (IOException ioe) {
+            Log.e(TAG, "Failed to fetch items", ioe);
+        }
     }
 }
 // 1) Create a URL object from a string.
