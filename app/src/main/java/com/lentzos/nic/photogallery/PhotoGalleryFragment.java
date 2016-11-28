@@ -27,6 +27,8 @@ public class PhotoGalleryFragment extends Fragment {
     private RecyclerView mPhotoRecyclerView;
     //Implementing setupAdapter()
     private List<GalleryItem> mItems = new ArrayList<>();
+    //thumbnaildownloader member variable
+    private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -39,6 +41,14 @@ public class PhotoGalleryFragment extends Fragment {
         setRetainInstance(true);
         // Now call the execute() method to start the AsyncTask thread. This will call doInBackground().
         new FetchItemsTask().execute();
+        //Create the ThumbnailDownloader thread and start it.
+        mThumbnailDownloader = new ThumbnailDownloader<>();
+        //call getlooper after you call start, otherwise there may be a race condition
+        //until you call getlooper, onlooperprepared may not be called and so calls to queuethumbnail
+        //will fail due to a null handler.
+        mThumbnailDownloader.start();
+        mThumbnailDownloader.getLooper();
+        Log.i(TAG, "Background thread started");
     }
 
     @Override
@@ -51,6 +61,14 @@ public class PhotoGalleryFragment extends Fragment {
         setupAdapter();
 
         return v;
+    }
+    //Override ondestroy() to quit the thread. You must do this otherwise the handlerthreads
+    //will never die.
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mThumbnailDownloader.quit();
+        Log.i(TAG, "Background thread destroyed");
     }
     //Implementing setupAdapter()
     private void setupAdapter() {
@@ -127,7 +145,10 @@ public class PhotoGalleryFragment extends Fragment {
             GalleryItem galleryItem = mGalleryItems.get(position);
             //photoHolder.bindGalleryItem(galleryItem);
             Drawable placeholder = getResources().getDrawable(R.drawable.worm);
-            photoHolder.bindDrawable(placeholder); 
+            photoHolder.bindDrawable(placeholder);
+            //call the thread's queuethumbnail() method. Pass in the target photoholder where the image
+            //will be displayed and the GalleryItem's url to download from.
+            mThumbnailDownloader.queueThumbnail(photoHolder, galleryItem.getUrl());
         }
 
         @Override
