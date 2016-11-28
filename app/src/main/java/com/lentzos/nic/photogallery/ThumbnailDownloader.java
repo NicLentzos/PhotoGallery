@@ -31,9 +31,29 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     //concurrent hash map = thread safe version of hashmap. Download request's identifying object T
     //is used as a key and you can store and retrieve a URL associated with the request.
 
+    //mresponsehandler variable holds a Handler passed from the main thread.
+    private Handler mResponseHandler;
+    private ThumbnailDownloadListener<T> mThumbnailDownloadListener;
+
+    //interface - listener interface used to communicate the responses (downloaded images) with
+    //the requester (the main thread).
+    public interface ThumbnailDownloadListener<T> {
+        //will be called when an image is fully downloaded and ready to add to the UI.
+        void onThumbnailDownloaded(T target, Bitmap thumbnail);
+    }
+    //Using the listener delegates responsibility for what to do with the downloaded image
+    //to another class (in this case photogalleryfragment).
+    //separate downloading task from UI updating task.
+    //thumbnaildownloader could be used to download other kinds of view objects.
+    public void setThumbnailDownloadListener(ThumbnailDownloadListener<T> listener) {
+        mThumbnailDownloadListener = listener;
+    }
+
     //constructor
-    public ThumbnailDownloader() {
+    //constructor now accepts a handler and sets mresponsehandler.
+    public ThumbnailDownloader(Handler responseHandler) {
         super(TAG);
+        mResponseHandler = responseHandler;
     }
     //initialise mRequestHandler and define what that handler will do when downloaded messages are
     //pulled off the queue and passed to it.
@@ -72,6 +92,10 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         }
     }
 
+    public void clearQueue() {
+        mResponseHandler.removeMessages(MESSAGE_DOWNLOAD);
+    }
+
     private void handleRequest(final T target) {
         try {
             final String url = mRequestMap.get(target);
@@ -81,6 +105,19 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             byte[] bitmapBytes = new FlickrFetchr().getUrlBytes(url);
             final Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
             Log.i(TAG, "Bitmap created");
+            //Handler method - post(Runnable). Handler.post(Runnable) is a convenience method for
+            //posting messages.
+            mResponseHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (mRequestMap.get(target) != url || mHasQuit) {
+                        return;
+                    }
+                    mRequestMap.remove(target);
+                    mThumbnailDownloadListener.onThumbnailDownloaded(target, bitmap);
+                }
+            });
+
         } catch (IOException ioe) {
             Log.e(TAG, "Error downloading image", ioe);
         }

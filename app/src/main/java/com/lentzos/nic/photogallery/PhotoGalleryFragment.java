@@ -1,8 +1,11 @@
 package com.lentzos.nic.photogallery;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -16,6 +19,8 @@ import android.widget.TextView;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.R.attr.bitmap;
 
 /**
  * Created by Nic on 25/11/2016.
@@ -42,7 +47,19 @@ public class PhotoGalleryFragment extends Fragment {
         // Now call the execute() method to start the AsyncTask thread. This will call doInBackground().
         new FetchItemsTask().execute();
         //Create the ThumbnailDownloader thread and start it.
-        mThumbnailDownloader = new ThumbnailDownloader<>();
+        //Configuring a response handler.
+        Handler responseHandler = new Handler();
+        mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
+        mThumbnailDownloader.setThumbnailDownloadListener(
+                new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>(){
+                    @Override
+                    public void onThumbnailDownloaded(PhotoHolder photoHolder, Bitmap bitmap) {
+                        Drawable drawable = new BitmapDrawable(getResources(), bitmap);
+                        photoHolder.bindDrawable(drawable);
+                   }
+                }
+
+                    );
         //call getlooper after you call start, otherwise there may be a race condition
         //until you call getlooper, onlooperprepared may not be called and so calls to queuethumbnail
         //will fail due to a null handler.
@@ -50,7 +67,7 @@ public class PhotoGalleryFragment extends Fragment {
         mThumbnailDownloader.getLooper();
         Log.i(TAG, "Background thread started");
     }
-
+    
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
@@ -61,6 +78,11 @@ public class PhotoGalleryFragment extends Fragment {
         setupAdapter();
 
         return v;
+    }
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        mThumbnailDownloader.clearQueue();
     }
     //Override ondestroy() to quit the thread. You must do this otherwise the handlerthreads
     //will never die.
