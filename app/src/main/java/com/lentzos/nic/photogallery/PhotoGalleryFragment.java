@@ -1,5 +1,6 @@
 package com.lentzos.nic.photogallery;
 
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -9,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -72,7 +74,7 @@ public class PhotoGalleryFragment extends Fragment {
         //    } catch (IOException ioe) {
         //        Log.e(TAG, "Failed to fetch URL: ", ioe);
         //    }
-            new FlickrFetchr().fetchItems();
+
             return new FlickrFetchr().fetchItems();
         }
         //Override onpostexecute() which runs after doinbackground() completes.
@@ -89,16 +91,17 @@ public class PhotoGalleryFragment extends Fragment {
     //First define a viewholder as an inner class.
 
     private class PhotoHolder extends RecyclerView.ViewHolder{
-        private TextView mTitleTextView;
+        //Update PhotoHolder to hold an imageview instead of a textview.
+        private ImageView mItemImageView;
 
         public PhotoHolder(View itemView) {
             super (itemView);
 
-            mTitleTextView = (TextView) itemView;
+            mItemImageView = (ImageView) itemView;
         }
-
-        public void bindGalleryItem(GalleryItem item) {
-            mTitleTextView.setText(item.toString());
+        //Create bindDrawable to set the imageview's drawable.
+        public void bindDrawable(Drawable drawable){
+            mItemImageView.setImageDrawable(drawable);
         }
     }
     // Now, add a recyclerview.adaptor to provide photoholders as needed based on a list of galleryitems.
@@ -109,17 +112,22 @@ public class PhotoGalleryFragment extends Fragment {
         public PhotoAdapter(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
         }
-
+        //onCreateViewHolder now needs to inflate the gallery_view file and pass it to photoholder's constructor.
         @Override
         public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
-            TextView textView = new TextView(getActivity());
-            return new PhotoHolder(textView);
+            //TextView textView = new TextView(getActivity());
+            //return new PhotoHolder(textView);
+            LayoutInflater inflater = LayoutInflater.from(getActivity());
+            View view = inflater.inflate(R.layout.gallery_item, viewGroup, false);
+            return new PhotoHolder(view);
         }
-
+        //Placeholder image for each ImageView.
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
-            photoHolder.bindGalleryItem(galleryItem);
+            //photoHolder.bindGalleryItem(galleryItem);
+            Drawable placeholder = getResources().getDrawable(R.drawable.worm);
+            photoHolder.bindDrawable(placeholder); 
         }
 
         @Override
