@@ -67,7 +67,7 @@ public class PhotoGalleryFragment extends Fragment {
         mThumbnailDownloader.getLooper();
         Log.i(TAG, "Background thread started");
     }
-    
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
@@ -115,7 +115,14 @@ public class PhotoGalleryFragment extends Fragment {
         //        Log.e(TAG, "Failed to fetch URL: ", ioe);
         //    }
 
-            return new FlickrFetchr().fetchItems();
+            //return new FlickrFetchr().fetchItems();
+            String query = "robot"; //Just for testing
+
+            if (query == null) {
+                return new FlickrFetchr().fetchRecentPhotos();
+            } else {
+                return new FlickrFetchr().searchPhotos(query);
+            }
         }
         //Override onpostexecute() which runs after doinbackground() completes.
         //runs on main thread.
